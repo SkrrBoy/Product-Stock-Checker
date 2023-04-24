@@ -10,6 +10,7 @@ def read_urls_from_file(filename):
     return urls
 
 def check_product_availability(urls):
+    results = []
     for url in urls:
         response = requests.get(url)
         html = response.content
@@ -21,9 +22,11 @@ def check_product_availability(urls):
                 next_sibling = item_flag.find_next_sibling('li', class_='item-flag')
                 if next_sibling is not None:
                     available_text = next_sibling.find('span').text
-            print(f'{url} - {available_text}\n')
+            if available_text != "Disponible":
+                results.append(f'{url} - {available_text}\n')
         else:
-            print(f'{url} - No se encontró el elemento <li> con la clase "item-flag"')
+            results.append(f'{url} - No se encontró el elemento <li> con la clase "item-flag"\n')
+    return results
 
 layout = [
     [sg.Text('Selecciona el archivo de texto que contiene las URLs a comprobar:')],
@@ -43,27 +46,13 @@ while True:
 
         load_window = sg.popup('Cargando...', auto_close=True, auto_close_duration=2)
 
-        check_product_availability(urls)
+        results = check_product_availability(urls)
 
         today = datetime.datetime.today().strftime('%Y-%m-%d')
         filename = f'check_{today}.txt'
 
         with open(filename, 'w') as file:
-            for url in urls:
-                response = requests.get(url)
-                html = response.content
-                soup = BeautifulSoup(html, 'html.parser')
-                item_flag = soup.find('li', class_='item-flag')
-                if item_flag is not None:
-                    available_text = item_flag.find('span').text
-                    if available_text == "Novedad":
-                        next_sibling = item_flag.find_next_sibling('li', class_='item-flag')
-                        if next_sibling is not None:
-                            available_text = next_sibling.find('span').text
-                    if available_text != "Disponible":
-                        file.write(f'{url} - {available_text}\n')
-                else:
-                    file.write(f'{url} - No se encontró el elemento <li> con la clase "item-flag"\n')
+            file.writelines(results)
 
         sg.popup('La comprobación ha finalizado.\n\nLos resultados se han guardado en el archivo "{}".'.format(filename), title='Comprobación finalizada')
 
